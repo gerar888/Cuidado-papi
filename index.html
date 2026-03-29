@@ -856,26 +856,34 @@ let state = {
 //  FIREBASE REST HELPERS
 // ════════════════════════════════════════════════════════════
 const fb = {
-  url(path) { return `${CONFIG.firebase_url}/${CONFIG.data_path}/${path}.json`; },
+  url(path) {
+    const base = (CONFIG.firebase_url || '').replace(/\/$/, '');
+    const dp   = (CONFIG.data_path  || '').replace(/^\/|\/$/g, '');
+    return `${base}/${dp}/${path}.json`;
+  },
   async get(path) {
     const r = await fetch(fb.url(path));
-    if (!r.ok) throw new Error(`Firebase GET error ${r.status}`);
+    if (!r.ok) throw new Error(`Firebase GET ${r.status}: ${await r.text()}`);
     return r.json();
   },
   async set(path, data) {
     const r = await fetch(fb.url(path), { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    if (!r.ok) throw new Error(`Firebase SET ${r.status}: ${await r.text()}`);
     return r.json();
   },
   async patch(path, data) {
     const r = await fetch(fb.url(path), { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    if (!r.ok) throw new Error(`Firebase PATCH ${r.status}: ${await r.text()}`);
     return r.json();
   },
   async push(path, data) {
     const r = await fetch(fb.url(path), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-    return r.json(); // returns { name: "-pushId" }
+    if (!r.ok) throw new Error(`Firebase PUSH ${r.status}: ${await r.text()}`);
+    return r.json();
   },
   async del(path) {
-    await fetch(fb.url(path), { method:'DELETE' });
+    const r = await fetch(fb.url(path), { method:'DELETE' });
+    if (!r.ok) throw new Error(`Firebase DELETE ${r.status}`);
   }
 };
 
@@ -1456,6 +1464,11 @@ async function guardarSignos() {
 
   if (!sis && !glu && !temp) { toast('⚠️ Ingresá al menos un valor'); return; }
 
+  const btn = document.querySelector('[onclick="guardarSignos()"]');
+  const btnOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Guardando...';
+
   const data = {
     sistolica: sis, diastolica: dia, pulso: pul,
     glucosa: glu, temperatura: temp,
@@ -1464,10 +1477,19 @@ async function guardarSignos() {
     notas: notas || null
   };
 
-  await fb.push(`signos_vitales/${today()}`, data);
-  toast('✅ Signos guardados');
-  ['sv-sistolica','sv-diastolica','sv-pulso','sv-glucosa','sv-temperatura','sv-notas'].forEach(id => document.getElementById(id).value = '');
-  loadSignosRecientes();
+  try {
+    const res = await fb.push(`signos_vitales/${today()}`, data);
+    if (!res || !res.name) throw new Error('Firebase no devolvió confirmación');
+    toast('✅ Signos guardados');
+    ['sv-sistolica','sv-diastolica','sv-pulso','sv-glucosa','sv-temperatura','sv-notas'].forEach(id => document.getElementById(id).value = '');
+    loadSignosRecientes();
+  } catch(e) {
+    console.error('guardarSignos error:', e);
+    toast('❌ Error: ' + (e.message || 'No se pudo guardar. Verificá conexión.'), 4000);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = btnOriginal;
+  }
 }
 
 async function loadSignosRecientes() {
