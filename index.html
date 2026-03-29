@@ -1201,6 +1201,12 @@ async function guardarMedicamento() {
   const nombre = document.getElementById('med-nombre').value.trim();
   if (!nombre) { toast('⚠️ Ingresá el nombre'); return; }
 
+  // Validar Firebase configurado
+  if (!CONFIG.firebase_url) {
+    toast('⚠️ Configurá Firebase primero (⚙️)');
+    return;
+  }
+
   const selDot = document.querySelector('#med-color-picker .color-dot.selected');
   const color = selDot ? selDot.style.background : COLORS[0];
 
@@ -1217,6 +1223,11 @@ async function guardarMedicamento() {
     activo: true,
     actualizado_en: new Date().toISOString()
   };
+
+  const btn = document.querySelector('[onclick="guardarMedicamento()"]');
+  const btnOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Guardando...';
 
   const editId = document.getElementById('med-edit-id').value;
   try {
@@ -1235,7 +1246,18 @@ async function guardarMedicamento() {
     scheduleAlarms();
     toast('✅ Medicamento guardado');
   } catch(e) {
-    toast('❌ Error guardando. Verificá Firebase.'); console.error(e);
+    console.error('guardarMedicamento error:', e);
+    // Mostrar error específico para poder diagnosticar
+    const msg = e.message || 'Error desconocido';
+    const short = msg.length > 80 ? msg.substring(0, 80) + '...' : msg;
+    toast('❌ ' + short, 5000);
+    // También mostrar alerta completa si es un error de permisos
+    if (msg.includes('403') || msg.includes('Permission')) {
+      setTimeout(() => alert('Error de permisos Firebase:\n\n' + msg + '\n\nVerificá que las reglas de Firebase incluyan el path "cuidado_papa" y que hayas publicado los cambios.'), 100);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = btnOriginal;
   }
 }
 
