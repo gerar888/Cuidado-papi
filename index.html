@@ -976,8 +976,10 @@ function calcularProximasAlarmas() {
         let t = new Date(fechaBase);
         t.setHours(h, m, 0, 0);
         const horas = parseInt(med.frecuencia_horas) || 8;
-        while (t < new Date(fechaBase.getTime() + 24*3600*1000)) {
-          horarios.push(new Date(t));
+        const seen = new Set();
+        while (t.getTime() <= fechaBase.getTime() + 24*3600*1000) {
+          const key = `${t.getHours()}h${t.getMinutes()}m`;
+          if (!seen.has(key)) { horarios.push(new Date(t)); seen.add(key); }
           t = new Date(t.getTime() + horas * 3600 * 1000);
         }
       } else if (med.frecuencia_tipo === 'horas_fijas') {
@@ -1270,12 +1272,16 @@ async function guardarMedicamento() {
 
 async function deleteMedicamento(id) {
   if (!confirm(`¿Eliminar ${state.medicamentos[id]?.nombre}?`)) return;
-  await fb.patch(`medicamentos/${id}`, { activo: false });
-  state.medicamentos[id].activo = false;
-  renderMedicamentos();
-  await loadTomasHoy();
-  scheduleAlarms();
-  toast('🗑 Medicamento eliminado');
+  try {
+    await fb.patch(`medicamentos/${id}`, { activo: false });
+    state.medicamentos[id].activo = false;
+    renderMedicamentos();
+    await loadTomasHoy();
+    scheduleAlarms();
+    toast('🗑 Medicamento eliminado');
+  } catch(e) {
+    toast('❌ Error eliminando: ' + (e.message || 'verificá conexión'), 4000);
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1284,8 +1290,14 @@ async function deleteMedicamento(id) {
 async function generateTomasHoy(force = false) {
   const fechas = [today(), tomorrow()];
   for (const fecha of fechas) {
-    const existingData = await fb.get(`tomas/${fecha}`);
-    const existing = existingData || {};
+    let existing = {};
+    try {
+      const existingData = await fb.get(`tomas/${fecha}`);
+      existing = existingData || {};
+    } catch(e) {
+      console.warn(`generateTomasHoy: no se pudo leer tomas/${fecha}`, e.message);
+      // continuar con existing vacío — se generarán las tomas de todas formas
+    }
 
     Object.entries(state.medicamentos).forEach(([medId, med]) => {
       if (!med.activo) return;
@@ -1298,8 +1310,13 @@ async function generateTomasHoy(force = false) {
         let t = new Date(fechaBase);
         t.setHours(h, m, 0, 0);
         const horas = parseInt(med.frecuencia_horas) || 8;
-        while (t < new Date(fechaBase.getTime() + 24*3600*1000)) {
-          horarios.push(new Date(t));
+        const seenTimes = new Set(); // evitar colisión si medianoche ya existe al inicio
+        while (t.getTime() <= fechaBase.getTime() + 24*3600*1000) {
+          const key = `${t.getHours()}h${t.getMinutes()}m`;
+          if (!seenTimes.has(key)) {
+            horarios.push(new Date(t));
+            seenTimes.add(key);
+          }
           t = new Date(t.getTime() + horas*3600*1000);
         }
       } else if (med.frecuencia_tipo === 'horas_fijas') {
@@ -1335,8 +1352,13 @@ async function generateTomasHoy(force = false) {
 }
 
 async function loadTomasHoy() {
-  const data = await fb.get(`tomas/${today()}`);
-  state.tomas_hoy = data || {};
+  try {
+    const data = await fb.get(`tomas/${today()}`);
+    state.tomas_hoy = data || {};
+  } catch(e) {
+    console.error('loadTomasHoy:', e.message);
+    // Mantener state.tomas_hoy como estaba, no romper la UI
+  }
   renderTimeline();
 }
 
@@ -1432,37 +1454,41 @@ async function ejecutarConfirmar() {
   const { confirmar_id: id, confirmar_fecha: fecha } = state;
   const notas = document.getElementById('confirmar-notas').value.trim();
   const usuario = CONFIG.usuario || 'Usuario';
-
-  await fb.patch(`tomas/${fecha}/${id}`, {
-    confirmado: true,
-    confirmado_por: usuario,
-    hora_confirmacion: new Date().toISOString(),
-    notas: notas || null
-  });
-
-  state.tomas_hoy[id] = { ...state.tomas_hoy[id], confirmado: true, confirmado_por: usuario, hora_confirmacion: new Date().toISOString(), notas };
-  closeModal('modal-confirmar');
-  renderTimeline();
-  toast(`✅ ${state.tomas_hoy[id].nombre} confirmada`);
+  try {
+    await fb.patch(`tomas/${fecha}/${id}`, {
+      confirmado: true,
+      confirmado_por: usuario,
+      hora_confirmacion: new Date().toISOString(),
+      notas: notas || null
+    });
+    state.tomas_hoy[id] = { ...state.tomas_hoy[id], confirmado: true, confirmado_por: usuario, hora_confirmacion: new Date().toISOString(), notas };
+    closeModal('modal-confirmar');
+    renderTimeline();
+    toast(`✅ ${state.tomas_hoy[id]?.nombre || 'Medicamento'} confirmada`);
+  } catch(e) {
+    toast('❌ Error confirmando: ' + (e.message || 'verificá conexión'), 4000);
+  }
 }
 
 async function marcarNoTomado() {
   const { confirmar_id: id, confirmar_fecha: fecha } = state;
   const notas = document.getElementById('confirmar-notas').value.trim();
   const usuario = CONFIG.usuario || 'Usuario';
-
-  await fb.patch(`tomas/${fecha}/${id}`, {
-    confirmado: false,
-    no_tomado: true,
-    confirmado_por: usuario,
-    hora_confirmacion: new Date().toISOString(),
-    notas: notas || null
-  });
-
-  state.tomas_hoy[id] = { ...state.tomas_hoy[id], confirmado: false, no_tomado: true };
-  closeModal('modal-confirmar');
-  renderTimeline();
-  toast(`❌ Marcado como no tomado`);
+  try {
+    await fb.patch(`tomas/${fecha}/${id}`, {
+      confirmado: false,
+      no_tomado: true,
+      confirmado_por: usuario,
+      hora_confirmacion: new Date().toISOString(),
+      notas: notas || null
+    });
+    state.tomas_hoy[id] = { ...state.tomas_hoy[id], confirmado: false, no_tomado: true };
+    closeModal('modal-confirmar');
+    renderTimeline();
+    toast(`❌ Marcado como no tomado`);
+  } catch(e) {
+    toast('❌ Error guardando: ' + (e.message || 'verificá conexión'), 4000);
+  }
 }
 
 // ════════════════════════════════════════════════════════════
