@@ -539,8 +539,11 @@ body {
 </div>
 
 <!-- ═══ NOTIFICATION BANNER ═════════════════════════════ -->
-<div id="notif-banner" onclick="requestNotifications()">
+<div id="notif-banner" onclick="requestNotifications()" class="hidden">
   ⚠️ <strong>Activa las notificaciones</strong> para recibir alarmas aunque el celular esté bloqueado. Toca aquí.
+</div>
+<div id="pwa-install-banner" class="hidden" style="background:rgba(88,166,255,.1);border-bottom:1px solid rgba(88,166,255,.2);padding:10px 16px;display:flex;align-items:center;gap:10px;font-size:12px;color:#58a6ff;cursor:pointer" onclick="showSettings()">
+  📲 <span>Para alarmas con pantalla bloqueada: instalá el app. <strong>Toca aquí →</strong></span>
 </div>
 
 <!-- ═══ TAB NAV ══════════════════════════════════════════ -->
@@ -832,7 +835,7 @@ body {
 const COLORS = ['#f59e0b','#3b82f6','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316'];
 
 let CONFIG = {
-  firebase_url: localStorage.getItem('fb_url') || 'https://patascr-c6cdd-default-rtdb.firebaseio.com',
+  firebase_url: localStorage.getItem('fb_url') || '',
   data_path:    localStorage.getItem('fb_path') || 'cuidado_papa',
   usuario:      localStorage.getItem('usuario') || '',
   paciente:     localStorage.getItem('paciente') || 'Papá'
@@ -1055,6 +1058,22 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 //  MEDICAMENTOS
 // ════════════════════════════════════════════════════════════
 async function loadMedicamentos() {
+  // Si no hay Firebase configurado, mostrar prompt
+  const fbUrl = CONFIG.firebase_url || '';
+  if (!fbUrl || !localStorage.getItem('fb_url')) {
+    const errHtml = `<div class="empty-state">
+      <div class="empty-state-icon">⚙️</div>
+      <div class="empty-state-title">Configuración requerida</div>
+      <div class="empty-state-sub">Tocá el ⚙️ arriba a la derecha para configurar tu Firebase y tu nombre.</div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="showSettings()">⚙️ Configurar ahora</button>
+    </div>`;
+    document.getElementById('meds-list').innerHTML = errHtml;
+    document.getElementById('timeline-container').innerHTML = errHtml;
+    document.getElementById('hoy-date-label').textContent = 'Configuración pendiente';
+    document.getElementById('hoy-resumen').textContent = '';
+    return;
+  }
+
   try {
     const data = await fb.get('medicamentos');
     state.medicamentos = data || {};
@@ -1064,7 +1083,15 @@ async function loadMedicamentos() {
     scheduleAlarms();
   } catch(e) {
     console.error(e);
-    document.getElementById('meds-list').innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Error de conexión</div><div class="empty-state-sub">Verificá la URL de Firebase en configuración.</div></div>`;
+    const errHtml = `<div class="empty-state">
+      <div class="empty-state-icon">⚠️</div>
+      <div class="empty-state-title">Error de conexión a Firebase</div>
+      <div class="empty-state-sub">${e.message || 'Verificá la URL y las reglas de seguridad.'}<br><br>En Firebase Console → Realtime Database → Reglas, asegurate que permitan lectura y escritura.</div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="showSettings()">⚙️ Verificar configuración</button>
+    </div>`;
+    document.getElementById('meds-list').innerHTML = errHtml;
+    document.getElementById('timeline-container').innerHTML = errHtml;
+    document.getElementById('hoy-date-label').textContent = 'Error de conexión';
   }
 }
 
@@ -1613,9 +1640,36 @@ setInterval(() => {
 async function init() {
   await registerSW();
 
-  // Notif banner
-  if (localStorage.getItem('notif_granted') === '1' || Notification.permission === 'granted') {
+  // Detectar si es iOS Safari en modo browser (no PWA)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  const hasNotifAPI = ('Notification' in window);
+
+  if (isStandalone && hasNotifAPI) {
+    // Es PWA instalada con API de notificaciones — mostrar banner de notif si no está concedido
+    if (localStorage.getItem('notif_granted') === '1' || Notification.permission === 'granted') {
+      document.getElementById('notif-banner').classList.add('hidden');
+    } else {
+      document.getElementById('notif-banner').classList.remove('hidden');
+    }
+    document.getElementById('pwa-install-banner').classList.add('hidden');
+  } else if (isIOS && !isStandalone) {
+    // iOS Safari en browser: no tiene API de notif, mostrar banner de instalación
     document.getElementById('notif-banner').classList.add('hidden');
+    document.getElementById('pwa-install-banner').classList.remove('hidden');
+  } else if (!hasNotifAPI) {
+    // Otro browser sin API: ocultar ambos banners
+    document.getElementById('notif-banner').classList.add('hidden');
+    document.getElementById('pwa-install-banner').classList.add('hidden');
+  } else {
+    // Android Chrome u otro con API: mostrar banner de notif
+    if (localStorage.getItem('notif_granted') === '1' || Notification.permission === 'granted') {
+      document.getElementById('notif-banner').classList.add('hidden');
+    } else {
+      document.getElementById('notif-banner').classList.remove('hidden');
+    }
+    document.getElementById('pwa-install-banner').classList.add('hidden');
   }
 
   // Header
@@ -1626,7 +1680,7 @@ async function init() {
 
   // Si no hay Firebase configurado, abrir settings
   if (!localStorage.getItem('fb_url') || !localStorage.getItem('fb_path')) {
-    setTimeout(showSettings, 500);
+    setTimeout(showSettings, 600);
   }
 
   await loadMedicamentos();
