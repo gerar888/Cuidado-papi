@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0d1117">
+<title>Cuidado Papá</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   VARIABLES Y RESET
+═══════════════════════════════════════════════ */
+:root {
+  --bg:       #0d1117;
+  --surface:  #161b22;
+  --surface2: #21262d;
+  --border:   #30363d;
+  --primary:  #f59e0b;
+  --primary2: #d97706;
+  --text:     #e6edf3;
+  --text2:    #8b949e;
+  --text3:    #484f58;
+  --ok:       #3fb950;
+  --warn:     #e3b341;
+  --danger:   #f85149;
+  --info:     #58a6ff;
+  --radius:   14px;
+  --radius-sm:8px;
+  --shadow:   0 4px 20px rgba(0,0,0,.4);
+  --font:     'DM Sans', system-ui, sans-serif;
+  --mono:     'DM Mono', monospace;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; overflow:hidden; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
+#header {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 10;
+}
+.header-logo {
+  width: 36px; height: 36px;
+  background: var(--primary);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.header-info { flex: 1; min-width: 0; }
+.header-title {
+  font-size: 15px; font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.header-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.header-actions { display: flex; gap: 6px; }
+.icon-btn {
+  width: 36px; height: 36px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.icon-btn:active { background: var(--border); }
+
+/* ═══════════════════════════════════════════════
+   TABS NAV
+═══════════════════════════════════════════════ */
+#tab-nav {
+  flex-shrink: 0;
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  cursor: pointer;
+  font-size: 10px; font-weight: 500;
+  color: var(--text2);
+  border: none; background: none;
+  transition: color .15s;
+  position: relative;
+}
+.tab-btn .tab-icon { font-size: 20px; }
+.tab-btn.active { color: var(--primary); }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px 2px 0 0;
+}
+.tab-badge {
+  position: absolute;
+  top: 5px; right: calc(50% - 16px);
+  background: var(--danger);
+  color: white;
+  font-size: 9px; font-weight: 700;
+  border-radius: 99px;
+  padding: 0 4px;
+  min-width: 15px;
+  text-align: center;
+  display: none;
+}
+.tab-badge.show { display: block; }
+
+/* ═══════════════════════════════════════════════
+   CONTENT AREA
+═══════════════════════════════════════════════ */
+#content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 16px;
+}
+.tab-page { display: none; }
+.tab-page.active { display: block; }
+
+/* ═══════════════════════════════════════════════
+   SECTION HEADERS
+═══════════════════════════════════════════════ */
+.section-header {
+  padding: 16px 16px 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .6px; }
+
+/* ═══════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 12px 10px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 14px 16px 10px;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.card-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.card-body { flex: 1; min-width: 0; }
+.card-title { font-size: 15px; font-weight: 600; }
+.card-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.card-actions {
+  padding: 0 12px 12px;
+  display: flex; gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════
+   BADGES / STATUS
+═══════════════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.badge-ok    { background: rgba(63,185,80,.15); color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+.badge-warn  { background: rgba(227,179,65,.15); color: #e3b341; border: 1px solid rgba(227,179,65,.3); }
+.badge-danger{ background: rgba(248,81,73,.15);  color: #f85149; border: 1px solid rgba(248,81,73,.3); }
+.badge-neutral{ background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+.badge-primary{ background: rgba(245,158,11,.15); color: var(--primary); border: 1px solid rgba(245,158,11,.3); }
+
+/* ═══════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  border: none; cursor: pointer; transition: opacity .15s, transform .1s;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--primary); color: #0d1117; }
+.btn-primary:hover { opacity: .9; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-danger { background: rgba(248,81,73,.15); color: var(--danger); border: 1px solid rgba(248,81,73,.3); }
+.btn-ok { background: rgba(63,185,80,.15); color: var(--ok); border: 1px solid rgba(63,185,80,.3); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-full { width: 100%; }
+
+/* FAB */
+.fab {
+  position: fixed; bottom: 24px; right: 20px;
+  width: 52px; height: 52px;
+  background: var(--primary);
+  color: #0d1117;
+  border-radius: 16px;
+  border: none;
+  font-size: 26px; font-weight: 300;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(245,158,11,.4);
+  transition: transform .15s, box-shadow .15s;
+  z-index: 50;
+}
+.fab:active { transform: scale(.93); }
+
+/* ═══════════════════════════════════════════════
+   TIMELINE (Tab Hoy)
+═══════════════════════════════════════════════ */
+.timeline { padding: 8px 12px 0; }
+.timeline-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin-bottom: 4px; position: relative;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 35px; top: 44px; bottom: -4px;
+  width: 2px; background: var(--border);
+}
+.timeline-item:last-child::before { display: none; }
+.tl-time {
+  width: 60px; flex-shrink: 0;
+  text-align: right;
+  padding-top: 12px;
+  font-family: var(--mono);
+  font-size: 13px; color: var(--text2);
+  font-weight: 500;
+}
+.tl-dot {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+  margin-top: 10px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  position: relative; z-index: 1;
+}
+.tl-dot.ok    { border-color: var(--ok);    background: rgba(63,185,80,.15); }
+.tl-dot.warn  { border-color: var(--warn);  background: rgba(227,179,65,.15); }
+.tl-dot.danger{ border-color: var(--danger); background: rgba(248,81,73,.15); }
+.tl-card {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.tl-card:active { border-color: var(--primary); }
+.tl-card.confirmado { opacity: .6; }
+.tl-med-name { font-size: 14px; font-weight: 600; }
+.tl-med-dosis { font-size: 12px; color: var(--text2); margin-top: 1px; }
+.tl-card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px;
+}
+.tl-confirmado-por { font-size: 11px; color: var(--ok); }
+
+/* ═══════════════════════════════════════════════
+   SIGNOS VITALES
+═══════════════════════════════════════════════ */
+.vitals-quick {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 12px 12px 0;
+  padding: 16px;
+}
+.vitals-quick-title {
+  font-size: 13px; font-weight: 600; margin-bottom: 12px;
+}
+.vitals-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.vitals-field { flex: 1; }
+.vitals-field label {
+  display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; font-weight: 500;
+}
+.vitals-input {
+  width: 100%;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text); font-family: var(--mono); font-size: 14px;
+  padding: 9px 10px;
+}
+.vitals-input:focus { outline: none; border-color: var(--primary); }
+
+.vital-log-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 12px 8px;
+  padding: 14px 16px;
+}
+.vital-log-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.vital-log-date { font-size: 12px; color: var(--text2); }
+.vital-log-who { font-size: 11px; color: var(--text3); }
+.vital-metrics { display: flex; gap: 16px; flex-wrap: wrap; }
+.vital-metric { text-align: center; }
+.vital-metric-val {
+  font-family: var(--mono); font-size: 18px; font-weight: 500; line-height: 1;
+}
+.vital-metric-lbl { font-size: 10px; color: var(--text2); margin-top: 2px; }
+.vital-status { margin-top: 8px; }
+
+/* ═══════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════ */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text2);
+}
+.empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.empty-state-sub { font-size: 13px; line-height: 1.5; }
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 100;
+  align-items: flex-end;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 0 0 env(safe-area-inset-bottom, 16px);
+  animation: slideUp .25s ease-out;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+.modal-header {
+  padding: 16px 20px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 17px; font-weight: 700; }
+.modal-close {
+  width: 30px; height: 30px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-body { padding: 16px 20px 20px; }
+
+/* Forms */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font); font-size: 14px;
+  padding: 10px 12px;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none; border-color: var(--primary);
+}
+.form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+.form-textarea { min-height: 72px; resize: vertical; }
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+.form-hint { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+.horas-fijas-container { display: flex; flex-wrap: wrap; gap: 8px; }
+.hora-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 10px;
+  font-family: var(--mono); font-size: 13px;
+}
+.hora-chip button { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 14px; padding: 0; }
+
+/* Color picker */
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; border: 2px solid transparent;
+  transition: transform .15s;
+}
+.color-dot.selected { border-color: white; transform: scale(1.15); }
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+#toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 13px; font-weight: 500;
+  opacity: 0; transition: opacity .25s, transform .25s;
+  z-index: 200; white-space: nowrap;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ═══════════════════════════════════════════════
+   LOADING
+═══════════════════════════════════════════════ */
+.loading-spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid var(--border); border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay {
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px; gap: 12px; color: var(--text2); font-size: 14px;
+}
+
+/* ═══════════════════════════════════════════════
+   NOTIF BANNER
+═══════════════════════════════════════════════ */
+#notif-banner {
+  background: rgba(245,158,11,.1);
+  border-bottom: 1px solid rgba(245,158,11,.2);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: var(--primary);
+  cursor: pointer;
+}
+#notif-banner.hidden { display: none; }
+
+/* Historial */
+.hist-date-header {
+  padding: 14px 16px 6px;
+  font-size: 13px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.hist-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0 12px 6px;
+  padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.hist-row-icon { font-size: 18px; flex-shrink: 0; }
+.hist-row-info { flex: 1; min-width: 0; }
+.hist-row-title { font-size: 13px; font-weight: 500; }
+.hist-row-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.hist-row-time { font-family: var(--mono); font-size: 11px; color: var(--text3); flex-shrink: 0; }
+
+/* Settings */
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 14px; font-weight: 500; }
+.setting-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* Medicamento card colors */
+.med-color-bar {
+  width: 4px; height: 100%; border-radius: 4px 0 0 4px;
+  position: absolute; left: 0; top: 0; bottom: 0;
+}
+.med-card { position: relative; padding-left: 16px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════ -->
+<div id="header">
+  <div class="header-logo">💊</div>
+  <div class="header-info">
+    <div class="header-title" id="header-title">Cuidado Papá</div>
+    <div class="header-sub" id="header-sub">Cargando...</div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="showSettings()" title="Configuración">⚙️</button>
+    <button class="icon-btn" id="install-btn" onclick="installPWA()" title="Instalar app" style="display:none">📲</button>
+  </div>
+</div>
+
+<!-- ═══ NOTIFICATION BANNER ═════════════════════════════ -->
+<div id="notif-banner" onclick="requestNotifications()">
+  ⚠️ <strong>Activa las notificaciones</strong> para recibir alarmas aunque el celular esté bloqueado. Toca aquí.
+</div>
+
+<!-- ═══ TAB NAV ══════════════════════════════════════════ -->
+<div id="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('hoy')" id="tab-hoy">
+    <span class="tab-icon">📋</span>
+    <span>Hoy</span>
+    <span class="tab-badge" id="badge-pendientes"></span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('medicamentos')" id="tab-medicamentos">
+    <span class="tab-icon">💊</span>
+    <span>Medicamentos</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('signos')" id="tab-signos">
+    <span class="tab-icon">🩺</span>
+    <span>Signos</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('historial')" id="tab-historial">
+    <span class="tab-icon">📈</span>
+    <span>Historial</span>
+  </button>
+</div>
+
+<!-- ═══ CONTENT ══════════════════════════════════════════ -->
+<div id="content">
+
+  <!-- ── HOY ─────────────────────────────────────────── -->
+  <div id="page-hoy" class="tab-page active">
+    <div class="section-header">
+      <span class="section-title" id="hoy-date-label">Cargando...</span>
+      <span id="hoy-resumen" class="badge badge-neutral" style="font-size:11px"></span>
+    </div>
+    <div id="timeline-container">
+      <div class="loading-overlay"><div class="loading-spinner"></div> Cargando tomas...</div>
+    </div>
+  </div>
+
+  <!-- ── MEDICAMENTOS ──────────────────────────────── -->
+  <div id="page-medicamentos" class="tab-page">
+    <div class="section-header">
+      <span class="section-title">Medicamentos activos</span>
+    </div>
+    <div id="meds-list">
+      <div class="loading-overlay"><div class="loading-spinner"></div> Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ── SIGNOS VITALES ───────────────────────────── -->
+  <div id="page-signos" class="tab-page">
+    <div class="vitals-quick">
+      <div class="vitals-quick-title">📝 Registrar ahora</div>
+      <div class="vitals-row">
+        <div class="vitals-field">
+          <label>Sistólica (mmHg)</label>
+          <input class="vitals-input" type="number" id="sv-sistolica" placeholder="120" min="60" max="250">
+        </div>
+        <div class="vitals-field">
+          <label>Diastólica (mmHg)</label>
+          <input class="vitals-input" type="number" id="sv-diastolica" placeholder="80" min="40" max="150">
+        </div>
+        <div class="vitals-field">
+          <label>Pulso</label>
+          <input class="vitals-input" type="number" id="sv-pulso" placeholder="72" min="30" max="200">
+        </div>
+      </div>
+      <div class="vitals-row">
+        <div class="vitals-field">
+          <label>Glucosa (mg/dL)</label>
+          <input class="vitals-input" type="number" id="sv-glucosa" placeholder="95" min="30" max="600">
+        </div>
+        <div class="vitals-field">
+          <label>Temperatura (°C)</label>
+          <input class="vitals-input" type="number" id="sv-temperatura" placeholder="36.5" min="34" max="42" step="0.1">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" style="font-size:11px">Notas (opcional)</label>
+        <input class="vitals-input" type="text" id="sv-notas" placeholder="Ej: antes del desayuno, en ayunas...">
+      </div>
+      <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="guardarSignos()">
+        💾 Guardar registro
+      </button>
+    </div>
+    <div class="section-header" style="margin-top:4px">
+      <span class="section-title">Últimos registros</span>
+    </div>
+    <div id="signos-history">
+      <div class="loading-overlay"><div class="loading-spinner"></div> Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ── HISTORIAL ─────────────────────────────────── -->
+  <div id="page-historial" class="tab-page">
+    <div style="padding:12px 12px 0">
+      <input type="date" class="form-input" id="hist-date" onchange="loadHistorial()">
+    </div>
+    <div id="historial-content" style="margin-top:8px">
+      <div class="empty-state">
+        <div class="empty-state-icon">📅</div>
+        <div class="empty-state-title">Seleccioná una fecha</div>
+        <div class="empty-state-sub">Verás el historial de tomas y signos vitales de ese día.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #content -->
+
+<!-- FAB -->
+<button class="fab" id="fab-btn" onclick="fabAction()" title="Agregar">+</button>
+
+<!-- ═══ TOAST ══════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: AGREGAR / EDITAR MEDICAMENTO
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-med">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="modal-med-title">Agregar medicamento</div>
+      <button class="modal-close" onclick="closeModal('modal-med')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="med-edit-id">
+
+      <div class="form-group">
+        <label class="form-label">Nombre del medicamento *</label>
+        <input class="form-input" id="med-nombre" type="text" placeholder="Ej: Metformina, Losartán...">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Dosis *</label>
+          <input class="form-input" id="med-dosis-val" type="text" placeholder="500">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unidad</label>
+          <select class="form-select" id="med-dosis-unit">
+            <option value="mg">mg</option>
+            <option value="mcg">mcg</option>
+            <option value="ml">ml</option>
+            <option value="UI">UI</option>
+            <option value="pastilla(s)">pastilla(s)</option>
+            <option value="gota(s)">gota(s)</option>
+            <option value="g">g</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Frecuencia</label>
+        <select class="form-select" id="med-freq-tipo" onchange="toggleFreqUI()">
+          <option value="cada_horas">Cada X horas</option>
+          <option value="horas_fijas">Horas específicas del día</option>
+        </select>
+      </div>
+
+      <!-- Cada X horas -->
+      <div id="ui-cada-horas">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Cada cuántas horas *</label>
+            <select class="form-select" id="med-freq-horas">
+              <option value="4">Cada 4 horas</option>
+              <option value="6">Cada 6 horas</option>
+              <option value="8" selected>Cada 8 horas</option>
+              <option value="12">Cada 12 horas</option>
+              <option value="24">Una vez al día</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Primera toma del día</label>
+            <input class="form-input" type="time" id="med-hora-inicio" value="08:00">
+          </div>
+        </div>
+      </div>
+
+      <!-- Horas fijas -->
+      <div id="ui-horas-fijas" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Agregar hora</label>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" type="time" id="hora-fija-input" style="flex:1">
+            <button class="btn btn-secondary" onclick="addHoraFija()">+ Agregar</button>
+          </div>
+          <div class="horas-fijas-container" id="horas-fijas-list" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Color identificador</label>
+        <div class="color-picker" id="med-color-picker"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Instrucciones / notas</label>
+        <textarea class="form-textarea" id="med-notas" placeholder="Ej: Tomar con comida, en ayunas, con agua abundante..."></textarea>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="guardarMedicamento()">
+        💾 Guardar medicamento
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: CONFIRMAR TOMA
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-confirmar">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">Confirmar toma</div>
+      <button class="modal-close" onclick="closeModal('modal-confirmar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="confirmar-info" style="margin-bottom:16px"></div>
+      <div class="form-group">
+        <label class="form-label">Observaciones (opcional)</label>
+        <input class="form-input" type="text" id="confirmar-notas" placeholder="Ej: tomó con jugo, se negó, vomitó...">
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ok btn-full" onclick="ejecutarConfirmar()">✅ Confirmar toma</button>
+        <button class="btn btn-danger btn-full" onclick="marcarNoTomado()">❌ No tomó</button>
+      </div>
+      <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="closeModal('modal-confirmar')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: SETTINGS
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Configuración</div>
+      <button class="modal-close" onclick="closeModal('modal-settings')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Mi nombre</div>
+          <div class="setting-sub">Aparece cuando confirmás una toma</div>
+        </div>
+        <input class="form-input" id="cfg-usuario" type="text" placeholder="Tu nombre" style="width:140px;text-align:right">
+      </div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Nombre del paciente</div>
+          <div class="setting-sub">Aparece en el encabezado</div>
+        </div>
+        <input class="form-input" id="cfg-paciente" type="text" placeholder="Papá" style="width:140px;text-align:right">
+      </div>
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label">URL Firebase (Realtime DB)</label>
+        <input class="form-input" id="cfg-firebase-url" type="url" placeholder="https://TU-PROYECTO-default-rtdb.firebaseio.com">
+        <div class="form-hint">Sin barra al final. Encontrás esto en Firebase Console → Realtime Database.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ruta de datos</label>
+        <input class="form-input" id="cfg-data-path" type="text" placeholder="cuidado_papa">
+        <div class="form-hint">Los datos de esta app se guardarán bajo esta ruta en tu Firebase.</div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="saveSettings()">💾 Guardar configuración</button>
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border)">
+        <div class="setting-label" style="margin-bottom:8px">📲 Instalar como app</div>
+        <div class="setting-sub" style="margin-bottom:10px">Para que las notificaciones funcionen con el celular bloqueado, instalá la app en la pantalla de inicio:</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7">
+          🤖 <strong>Android:</strong> Menú del navegador → "Instalar app" o "Agregar a pantalla de inicio"<br>
+          🍎 <strong>iPhone iOS 16.4+:</strong> Safari → compartir → "Agregar a pantalla de inicio"
+        </div>
+        <button class="btn btn-secondary btn-full" style="margin-top:10px" onclick="installPWA()">📲 Instalar app</button>
+      </div>
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border)">
+        <button class="btn btn-danger btn-sm" onclick="if(confirm('¿Cerrar sesión local?')){localStorage.clear();location.reload()}">🗑 Limpiar datos locales</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN
+// ════════════════════════════════════════════════════════════
+const COLORS = ['#f59e0b','#3b82f6','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316'];
+
+let CONFIG = {
+  firebase_url: localStorage.getItem('fb_url') || 'https://patascr-c6cdd-default-rtdb.firebaseio.com',
+  data_path:    localStorage.getItem('fb_path') || 'cuidado_papa',
+  usuario:      localStorage.getItem('usuario') || '',
+  paciente:     localStorage.getItem('paciente') || 'Papá'
+};
+
+// State
+let state = {
+  medicamentos: {},
+  tomas_hoy: {},
+  signos_recientes: [],
+  tab: 'hoy',
+  confirmar_id: null,
+  confirmar_fecha: null,
+  horas_fijas_temp: []
+};
+
+// ════════════════════════════════════════════════════════════
+//  FIREBASE REST HELPERS
+// ════════════════════════════════════════════════════════════
+const fb = {
+  url(path) { return `${CONFIG.firebase_url}/${CONFIG.data_path}/${path}.json`; },
+  async get(path) {
+    const r = await fetch(fb.url(path));
+    if (!r.ok) throw new Error(`Firebase GET error ${r.status}`);
+    return r.json();
+  },
+  async set(path, data) {
+    const r = await fetch(fb.url(path), { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    return r.json();
+  },
+  async patch(path, data) {
+    const r = await fetch(fb.url(path), { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    return r.json();
+  },
+  async push(path, data) {
+    const r = await fetch(fb.url(path), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    return r.json(); // returns { name: "-pushId" }
+  },
+  async del(path) {
+    await fetch(fb.url(path), { method:'DELETE' });
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════════════════
+function today() { return new Date().toISOString().split('T')[0]; }
+function tomorrow() {
+  const d = new Date(); d.setDate(d.getDate()+1);
+  return d.toISOString().split('T')[0];
+}
+function fmtTime(isoOrHHMM) {
+  if (!isoOrHHMM) return '';
+  if (isoOrHHMM.includes('T')) {
+    return new Date(isoOrHHMM).toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' });
+  }
+  return isoOrHHMM;
+}
+function fmtDateTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('es-CR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+function isAtrasado(hora_programada) {
+  return Date.now() > new Date(hora_programada).getTime() + 5*60000; // 5 min grace
+}
+
+function toast(msg, dur=2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ════════════════════════════════════════════════════════════
+//  SERVICE WORKER
+// ════════════════════════════════════════════════════════════
+let swRegistration = null;
+
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+    console.log('[App] SW registrado');
+  } catch(e) {
+    console.warn('[App] SW falló:', e);
+  }
+}
+
+async function requestNotifications() {
+  if (!('Notification' in window)) { toast('Este navegador no soporta notificaciones'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    document.getElementById('notif-banner').classList.add('hidden');
+    localStorage.setItem('notif_granted', '1');
+    toast('✅ Notificaciones activadas');
+    scheduleAlarms();
+  } else {
+    toast('⚠️ Permiso denegado. Activalas en la configuración del celular.');
+  }
+}
+
+async function scheduleAlarms() {
+  if (!swRegistration) return;
+  if (Notification.permission !== 'granted') return;
+
+  const sw = swRegistration.active;
+  if (!sw) return;
+
+  const alarmas = calcularProximasAlarmas();
+  const channel = new MessageChannel();
+  sw.postMessage({ type: 'SCHEDULE_ALARMS', data: { alarmas } }, [channel.port2]);
+  channel.port1.onmessage = e => {
+    console.log(`[App] SW confirmó ${e.data.count} alarmas programadas`);
+  };
+}
+
+function calcularProximasAlarmas() {
+  const ahora = new Date();
+  const alarmas = [];
+
+  Object.entries(state.medicamentos).forEach(([id, med]) => {
+    if (!med.activo) return;
+
+    [today(), tomorrow()].forEach(fechaStr => {
+      const fechaBase = new Date(fechaStr + 'T00:00:00');
+      let horarios = [];
+
+      if (med.frecuencia_tipo === 'cada_horas') {
+        const [h, m] = (med.hora_inicio || '08:00').split(':').map(Number);
+        let t = new Date(fechaBase);
+        t.setHours(h, m, 0, 0);
+        const horas = parseInt(med.frecuencia_horas) || 8;
+        while (t < new Date(fechaBase.getTime() + 24*3600*1000)) {
+          horarios.push(new Date(t));
+          t = new Date(t.getTime() + horas * 3600 * 1000);
+        }
+      } else if (med.frecuencia_tipo === 'horas_fijas') {
+        (med.horas_fijas || []).forEach(hora => {
+          const [h, m] = hora.split(':').map(Number);
+          const t = new Date(fechaBase);
+          t.setHours(h, m, 0, 0);
+          horarios.push(t);
+        });
+      }
+
+      horarios.forEach(hora => {
+        if (hora <= ahora) return;
+        const alarmId = `${fechaStr}_${id}_${hora.getHours()}h${hora.getMinutes()}m`;
+        const tomaPath = `tomas/${fechaStr}/${alarmId}`;
+        alarmas.push({
+          id: alarmId,
+          medicamento_id: id,
+          nombre: med.nombre,
+          dosis: `${med.dosis_val || ''} ${med.dosis_unit || ''}`.trim(),
+          hora_programada: hora.toISOString(),
+          firebase_url: CONFIG.firebase_url,
+          toma_path: `${CONFIG.data_path}/${tomaPath}`
+        });
+      });
+    });
+  });
+
+  return alarmas.sort((a, b) => new Date(a.hora_programada) - new Date(b.hora_programada));
+}
+
+// ════════════════════════════════════════════════════════════
+//  PWA INSTALL
+// ════════════════════════════════════════════════════════════
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-btn').style.display = 'flex';
+});
+
+async function installPWA() {
+  if (!deferredInstall) { toast('Usá el menú del navegador para instalar'); return; }
+  deferredInstall.prompt();
+  const result = await deferredInstall.userChoice;
+  if (result.outcome === 'accepted') { deferredInstall = null; document.getElementById('install-btn').style.display = 'none'; }
+}
+
+// ════════════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${tab}`).classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+
+  const fab = document.getElementById('fab-btn');
+  fab.style.display = (tab === 'medicamentos' || tab === 'hoy') ? 'flex' : 'none';
+  fab.title = tab === 'medicamentos' ? 'Agregar medicamento' : 'Agregar signos';
+
+  if (tab === 'historial') {
+    const el = document.getElementById('hist-date');
+    if (!el.value) el.value = today();
+    loadHistorial();
+  }
+}
+
+function fabAction() {
+  if (state.tab === 'medicamentos') openModalMed();
+  else if (state.tab === 'hoy') { switchTab('signos'); }
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODALS
+// ════════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ════════════════════════════════════════════════════════════
+//  MEDICAMENTOS
+// ════════════════════════════════════════════════════════════
+async function loadMedicamentos() {
+  try {
+    const data = await fb.get('medicamentos');
+    state.medicamentos = data || {};
+    renderMedicamentos();
+    await generateTomasHoy();
+    await loadTomasHoy();
+    scheduleAlarms();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('meds-list').innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Error de conexión</div><div class="empty-state-sub">Verificá la URL de Firebase en configuración.</div></div>`;
+  }
+}
+
+function renderMedicamentos() {
+  const container = document.getElementById('meds-list');
+  const meds = Object.entries(state.medicamentos).filter(([,m]) => m.activo !== false);
+
+  if (meds.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💊</div><div class="empty-state-title">Sin medicamentos</div><div class="empty-state-sub">Tocá el botón + para agregar el primer medicamento.</div></div>`;
+    return;
+  }
+
+  container.innerHTML = meds.map(([id, med]) => {
+    const color = med.color || '#f59e0b';
+    const schedule = med.frecuencia_tipo === 'cada_horas'
+      ? `Cada ${med.frecuencia_horas}h · Primera toma: ${fmtTime(med.hora_inicio || '08:00')}`
+      : `Horas fijas: ${(med.horas_fijas || []).join(', ')}`;
+    return `
+      <div class="card med-card" style="border-left: 4px solid ${color}; padding-left:12px">
+        <div class="card-header">
+          <div class="card-icon" style="background:${color}22">💊</div>
+          <div class="card-body">
+            <div class="card-title">${med.nombre}</div>
+            <div class="card-sub">${med.dosis_val || ''} ${med.dosis_unit || ''}</div>
+            <div class="card-sub" style="margin-top:4px">${schedule}</div>
+            ${med.notas ? `<div class="card-sub" style="margin-top:3px;font-style:italic">${med.notas}</div>` : ''}
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-secondary btn-sm" onclick="editMedicamento('${id}')">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteMedicamento('${id}')">🗑 Eliminar</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openModalMed(editId = null) {
+  const med = editId ? state.medicamentos[editId] : null;
+  document.getElementById('modal-med-title').textContent = editId ? 'Editar medicamento' : 'Agregar medicamento';
+  document.getElementById('med-edit-id').value = editId || '';
+  document.getElementById('med-nombre').value = med?.nombre || '';
+  document.getElementById('med-dosis-val').value = med?.dosis_val || '';
+  document.getElementById('med-dosis-unit').value = med?.dosis_unit || 'mg';
+  document.getElementById('med-freq-tipo').value = med?.frecuencia_tipo || 'cada_horas';
+  document.getElementById('med-freq-horas').value = med?.frecuencia_horas || '8';
+  document.getElementById('med-hora-inicio').value = med?.hora_inicio || '08:00';
+  document.getElementById('med-notas').value = med?.notas || '';
+
+  // Color picker
+  const cp = document.getElementById('med-color-picker');
+  cp.innerHTML = COLORS.map(c => `<div class="color-dot ${(med?.color||COLORS[0])===c?'selected':''}" style="background:${c}" onclick="selectColor('${c}',this)"></div>`).join('');
+
+  // Horas fijas
+  state.horas_fijas_temp = med?.horas_fijas ? [...med.horas_fijas] : [];
+  renderHorasFijasChips();
+
+  toggleFreqUI();
+  openModal('modal-med');
+}
+
+function editMedicamento(id) { openModalMed(id); }
+
+function selectColor(color, el) {
+  document.querySelectorAll('#med-color-picker .color-dot').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+  el.dataset.selected = color;
+}
+function getSelectedColor() {
+  const sel = document.querySelector('#med-color-picker .color-dot.selected');
+  return sel ? getComputedStyle(sel).backgroundColor && sel.style.background : COLORS[0];
+}
+
+function toggleFreqUI() {
+  const tipo = document.getElementById('med-freq-tipo').value;
+  document.getElementById('ui-cada-horas').style.display = tipo === 'cada_horas' ? '' : 'none';
+  document.getElementById('ui-horas-fijas').style.display = tipo === 'horas_fijas' ? '' : 'none';
+}
+
+function addHoraFija() {
+  const val = document.getElementById('hora-fija-input').value;
+  if (!val) return;
+  if (!state.horas_fijas_temp.includes(val)) {
+    state.horas_fijas_temp.push(val);
+    state.horas_fijas_temp.sort();
+    renderHorasFijasChips();
+  }
+}
+function removeHoraFija(h) {
+  state.horas_fijas_temp = state.horas_fijas_temp.filter(x => x !== h);
+  renderHorasFijasChips();
+}
+function renderHorasFijasChips() {
+  document.getElementById('horas-fijas-list').innerHTML = state.horas_fijas_temp.map(h =>
+    `<div class="hora-chip">${h} <button onclick="removeHoraFija('${h}')">×</button></div>`
+  ).join('');
+}
+
+async function guardarMedicamento() {
+  const nombre = document.getElementById('med-nombre').value.trim();
+  if (!nombre) { toast('⚠️ Ingresá el nombre'); return; }
+
+  const selDot = document.querySelector('#med-color-picker .color-dot.selected');
+  const color = selDot ? selDot.style.background : COLORS[0];
+
+  const data = {
+    nombre,
+    dosis_val: document.getElementById('med-dosis-val').value.trim(),
+    dosis_unit: document.getElementById('med-dosis-unit').value,
+    frecuencia_tipo: document.getElementById('med-freq-tipo').value,
+    frecuencia_horas: document.getElementById('med-freq-horas').value,
+    hora_inicio: document.getElementById('med-hora-inicio').value,
+    horas_fijas: state.horas_fijas_temp,
+    notas: document.getElementById('med-notas').value.trim(),
+    color,
+    activo: true,
+    actualizado_en: new Date().toISOString()
+  };
+
+  const editId = document.getElementById('med-edit-id').value;
+  try {
+    if (editId) {
+      await fb.patch(`medicamentos/${editId}`, data);
+      state.medicamentos[editId] = { ...state.medicamentos[editId], ...data };
+    } else {
+      data.creado_en = new Date().toISOString();
+      const res = await fb.push('medicamentos', data);
+      state.medicamentos[res.name] = data;
+    }
+    closeModal('modal-med');
+    renderMedicamentos();
+    await generateTomasHoy(true);
+    await loadTomasHoy();
+    scheduleAlarms();
+    toast('✅ Medicamento guardado');
+  } catch(e) {
+    toast('❌ Error guardando. Verificá Firebase.'); console.error(e);
+  }
+}
+
+async function deleteMedicamento(id) {
+  if (!confirm(`¿Eliminar ${state.medicamentos[id]?.nombre}?`)) return;
+  await fb.patch(`medicamentos/${id}`, { activo: false });
+  state.medicamentos[id].activo = false;
+  renderMedicamentos();
+  await loadTomasHoy();
+  scheduleAlarms();
+  toast('🗑 Medicamento eliminado');
+}
+
+// ════════════════════════════════════════════════════════════
+//  TOMAS DEL DÍA
+// ════════════════════════════════════════════════════════════
+async function generateTomasHoy(force = false) {
+  const fechas = [today(), tomorrow()];
+  for (const fecha of fechas) {
+    const existingData = await fb.get(`tomas/${fecha}`);
+    const existing = existingData || {};
+
+    Object.entries(state.medicamentos).forEach(([medId, med]) => {
+      if (!med.activo) return;
+
+      const fechaBase = new Date(fecha + 'T00:00:00');
+      let horarios = [];
+
+      if (med.frecuencia_tipo === 'cada_horas') {
+        const [h, m] = (med.hora_inicio || '08:00').split(':').map(Number);
+        let t = new Date(fechaBase);
+        t.setHours(h, m, 0, 0);
+        const horas = parseInt(med.frecuencia_horas) || 8;
+        while (t < new Date(fechaBase.getTime() + 24*3600*1000)) {
+          horarios.push(new Date(t));
+          t = new Date(t.getTime() + horas*3600*1000);
+        }
+      } else if (med.frecuencia_tipo === 'horas_fijas') {
+        (med.horas_fijas || []).forEach(hora => {
+          const [h2, m2] = hora.split(':').map(Number);
+          const t = new Date(fechaBase);
+          t.setHours(h2, m2, 0, 0);
+          horarios.push(t);
+        });
+      }
+
+      horarios.forEach(hora => {
+        const tomaId = `${medId}_${hora.getHours()}h${hora.getMinutes()}m`;
+        if (!existing[tomaId] || force) {
+          fb.set(`tomas/${fecha}/${tomaId}`, {
+            medicamento_id: medId,
+            nombre: med.nombre,
+            dosis: `${med.dosis_val||''} ${med.dosis_unit||''}`.trim(),
+            hora_programada: hora.toISOString(),
+            confirmado: false,
+            confirmado_por: null,
+            hora_confirmacion: null,
+            notas: null,
+            color: med.color || COLORS[0]
+          });
+        }
+      });
+    });
+  }
+}
+
+async function loadTomasHoy() {
+  const data = await fb.get(`tomas/${today()}`);
+  state.tomas_hoy = data || {};
+  renderTimeline();
+}
+
+function renderTimeline() {
+  const container = document.getElementById('timeline-container');
+  const tomas = Object.entries(state.tomas_hoy)
+    .map(([id, t]) => ({ id, ...t }))
+    .sort((a, b) => new Date(a.hora_programada) - new Date(b.hora_programada));
+
+  // Header date & summary
+  const dateLabel = new Date().toLocaleDateString('es-CR', { weekday:'long', day:'numeric', month:'long' });
+  document.getElementById('hoy-date-label').textContent = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
+
+  const pendientes = tomas.filter(t => !t.confirmado && isAtrasado(t.hora_programada)).length;
+  const tomadas = tomas.filter(t => t.confirmado).length;
+  const resEl = document.getElementById('hoy-resumen');
+  resEl.textContent = `${tomadas}/${tomas.length} tomadas`;
+  resEl.className = 'badge ' + (pendientes > 0 ? 'badge-danger' : 'badge-ok');
+
+  // Badge
+  const badge = document.getElementById('badge-pendientes');
+  if (pendientes > 0) { badge.textContent = pendientes; badge.classList.add('show'); }
+  else { badge.classList.remove('show'); }
+
+  if (tomas.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-title">Sin tomas programadas</div><div class="empty-state-sub">Agregá medicamentos para ver el horario del día.</div></div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="timeline">${tomas.map(t => {
+    const hora = fmtTime(t.hora_programada);
+    const now = new Date();
+    const hp = new Date(t.hora_programada);
+    let status, dotClass, badge2;
+    if (t.confirmado) {
+      status = `<span class="badge badge-ok">✅ Tomado</span>`;
+      dotClass = 'ok';
+    } else if (isAtrasado(t.hora_programada)) {
+      status = `<span class="badge badge-danger">⚠️ Atrasado</span>`;
+      dotClass = 'danger';
+    } else if (hp - now < 30*60000) {
+      status = `<span class="badge badge-warn">⏰ Pronto</span>`;
+      dotClass = 'warn';
+    } else {
+      status = `<span class="badge badge-neutral">🕐 Pendiente</span>`;
+      dotClass = '';
+    }
+    const confirmadoPor = t.confirmado ? `<span class="tl-confirmado-por">por ${t.confirmado_por || 'desconocido'} · ${fmtTime(t.hora_confirmacion)}</span>` : '';
+    return `
+      <div class="timeline-item">
+        <div class="tl-time">${hora}</div>
+        <div class="tl-dot ${dotClass}">${t.confirmado?'✓':'·'}</div>
+        <div class="tl-card ${t.confirmado?'confirmado':''}" onclick="abrirConfirmar('${today()}','${t.id}')" style="border-left:3px solid ${t.color||'#f59e0b'}">
+          <div class="tl-med-name">${t.nombre}</div>
+          <div class="tl-med-dosis">${t.dosis}</div>
+          ${t.notas ? `<div class="tl-med-dosis" style="margin-top:3px;font-style:italic">${t.notas}</div>` : ''}
+          <div class="tl-card-footer">${status}${confirmadoPor}</div>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  CONFIRMAR TOMA
+// ════════════════════════════════════════════════════════════
+function abrirConfirmar(fecha, id) {
+  const t = state.tomas_hoy[id];
+  if (!t) return;
+  state.confirmar_id = id;
+  state.confirmar_fecha = fecha;
+
+  document.getElementById('confirmar-info').innerHTML = `
+    <div style="text-align:center;padding:12px 0 4px">
+      <div style="font-size:32px;margin-bottom:8px">💊</div>
+      <div style="font-size:18px;font-weight:700">${t.nombre}</div>
+      <div style="font-size:14px;color:var(--text2);margin-top:4px">${t.dosis}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">Programado: ${fmtTime(t.hora_programada)}</div>
+      ${t.confirmado ? `<div class="badge badge-ok" style="margin:8px auto 0;display:inline-flex">✅ Ya confirmada por ${t.confirmado_por}</div>` : ''}
+    </div>`;
+  document.getElementById('confirmar-notas').value = '';
+  openModal('modal-confirmar');
+}
+
+async function ejecutarConfirmar() {
+  const { confirmar_id: id, confirmar_fecha: fecha } = state;
+  const notas = document.getElementById('confirmar-notas').value.trim();
+  const usuario = CONFIG.usuario || 'Usuario';
+
+  await fb.patch(`tomas/${fecha}/${id}`, {
+    confirmado: true,
+    confirmado_por: usuario,
+    hora_confirmacion: new Date().toISOString(),
+    notas: notas || null
+  });
+
+  state.tomas_hoy[id] = { ...state.tomas_hoy[id], confirmado: true, confirmado_por: usuario, hora_confirmacion: new Date().toISOString(), notas };
+  closeModal('modal-confirmar');
+  renderTimeline();
+  toast(`✅ ${state.tomas_hoy[id].nombre} confirmada`);
+}
+
+async function marcarNoTomado() {
+  const { confirmar_id: id, confirmar_fecha: fecha } = state;
+  const notas = document.getElementById('confirmar-notas').value.trim();
+  const usuario = CONFIG.usuario || 'Usuario';
+
+  await fb.patch(`tomas/${fecha}/${id}`, {
+    confirmado: false,
+    no_tomado: true,
+    confirmado_por: usuario,
+    hora_confirmacion: new Date().toISOString(),
+    notas: notas || null
+  });
+
+  state.tomas_hoy[id] = { ...state.tomas_hoy[id], confirmado: false, no_tomado: true };
+  closeModal('modal-confirmar');
+  renderTimeline();
+  toast(`❌ Marcado como no tomado`);
+}
+
+// ════════════════════════════════════════════════════════════
+//  SIGNOS VITALES
+// ════════════════════════════════════════════════════════════
+function presionStatus(sis, dia) {
+  if (!sis || !dia) return null;
+  if (sis >= 180 || dia >= 120) return { badge:'badge-danger', icon:'🔴', label:'Crisis hipertensiva' };
+  if (sis >= 140 || dia >= 90)  return { badge:'badge-danger', icon:'🔴', label:'Hipertensión alta' };
+  if (sis >= 130 || dia >= 80)  return { badge:'badge-warn',   icon:'🟡', label:'Hipertensión' };
+  if (sis >= 120 && dia < 80)   return { badge:'badge-warn',   icon:'🟡', label:'Elevada' };
+  if (sis < 90  || dia < 60)   return { badge:'badge-warn',   icon:'🟡', label:'Baja' };
+  return { badge:'badge-ok', icon:'🟢', label:'Normal' };
+}
+
+function glucosaStatus(g) {
+  if (!g) return null;
+  if (g < 70)  return { badge:'badge-danger', icon:'🔴', label:'Hipoglucemia' };
+  if (g <= 99) return { badge:'badge-ok',     icon:'🟢', label:'Normal' };
+  if (g <= 125)return { badge:'badge-warn',   icon:'🟡', label:'Prediabetes' };
+  return { badge:'badge-danger', icon:'🔴', label:'Hiperglucemia' };
+}
+
+function tempStatus(t) {
+  if (!t) return null;
+  if (t < 36)   return { badge:'badge-warn',   icon:'🟡', label:'Hipotermia' };
+  if (t <= 37.2)return { badge:'badge-ok',     icon:'🟢', label:'Normal' };
+  if (t <= 38)  return { badge:'badge-warn',   icon:'🟡', label:'Febrícula' };
+  return { badge:'badge-danger', icon:'🔴', label:'Fiebre' };
+}
+
+async function guardarSignos() {
+  const sis  = parseFloat(document.getElementById('sv-sistolica').value) || null;
+  const dia  = parseFloat(document.getElementById('sv-diastolica').value) || null;
+  const pul  = parseFloat(document.getElementById('sv-pulso').value) || null;
+  const glu  = parseFloat(document.getElementById('sv-glucosa').value) || null;
+  const temp = parseFloat(document.getElementById('sv-temperatura').value) || null;
+  const notas= document.getElementById('sv-notas').value.trim();
+
+  if (!sis && !glu && !temp) { toast('⚠️ Ingresá al menos un valor'); return; }
+
+  const data = {
+    sistolica: sis, diastolica: dia, pulso: pul,
+    glucosa: glu, temperatura: temp,
+    registrado_por: CONFIG.usuario || 'Usuario',
+    hora: new Date().toISOString(),
+    notas: notas || null
+  };
+
+  await fb.push(`signos_vitales/${today()}`, data);
+  toast('✅ Signos guardados');
+  ['sv-sistolica','sv-diastolica','sv-pulso','sv-glucosa','sv-temperatura','sv-notas'].forEach(id => document.getElementById(id).value = '');
+  loadSignosRecientes();
+}
+
+async function loadSignosRecientes() {
+  const fechas = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    fechas.push(d.toISOString().split('T')[0]);
+  }
+  const container = document.getElementById('signos-history');
+  container.innerHTML = `<div class="loading-overlay"><div class="loading-spinner"></div></div>`;
+
+  let all = [];
+  for (const f of fechas) {
+    try {
+      const data = await fb.get(`signos_vitales/${f}`);
+      if (data) Object.entries(data).forEach(([id, s]) => all.push({ id, fecha:f, ...s }));
+    } catch(_) {}
+  }
+  all.sort((a,b) => new Date(b.hora)-new Date(a.hora));
+
+  if (all.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🩺</div><div class="empty-state-title">Sin registros</div><div class="empty-state-sub">Empezá registrando los signos vitales arriba.</div></div>`;
+    return;
+  }
+
+  container.innerHTML = all.map(s => {
+    const pSt = presionStatus(s.sistolica, s.diastolica);
+    const gSt = glucosaStatus(s.glucosa);
+    const tSt = tempStatus(s.temperatura);
+
+    const metrics = [];
+    if (s.sistolica)  metrics.push({ val: `${s.sistolica}/${s.diastolica}`, lbl: 'mmHg' });
+    if (s.pulso)      metrics.push({ val: s.pulso, lbl: 'bpm' });
+    if (s.glucosa)    metrics.push({ val: s.glucosa, lbl: 'mg/dL' });
+    if (s.temperatura)metrics.push({ val: `${s.temperatura}°`, lbl: 'Temp' });
+
+    const statuses = [pSt, gSt, tSt].filter(Boolean);
+    const worstSt = statuses.find(s2 => s2.badge==='badge-danger') || statuses.find(s2 => s2.badge==='badge-warn') || statuses[0];
+
+    return `<div class="vital-log-card">
+      <div class="vital-log-header">
+        <div>
+          <div style="font-size:13px;font-weight:600">${fmtDateTime(s.hora)}</div>
+          <div class="vital-log-who">📍 ${s.registrado_por || 'Sistema'}</div>
+        </div>
+        ${worstSt ? `<span class="badge ${worstSt.badge}">${worstSt.icon} ${worstSt.label}</span>` : ''}
+      </div>
+      <div class="vital-metrics">
+        ${metrics.map(m => `<div class="vital-metric"><div class="vital-metric-val">${m.val}</div><div class="vital-metric-lbl">${m.lbl}</div></div>`).join('')}
+      </div>
+      ${s.notas ? `<div style="font-size:12px;color:var(--text2);margin-top:8px;font-style:italic">${s.notas}</div>` : ''}
+      ${statuses.length > 0 ? `<div class="vital-status">${statuses.map(st => `<span class="badge ${st.badge}" style="margin-right:4px;margin-top:6px">${st.icon} ${st.label}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  HISTORIAL
+// ════════════════════════════════════════════════════════════
+async function loadHistorial() {
+  const fecha = document.getElementById('hist-date').value;
+  if (!fecha) return;
+  const container = document.getElementById('historial-content');
+  container.innerHTML = `<div class="loading-overlay"><div class="loading-spinner"></div> Cargando...</div>`;
+
+  try {
+    const [tomasData, signosData] = await Promise.all([
+      fb.get(`tomas/${fecha}`),
+      fb.get(`signos_vitales/${fecha}`)
+    ]);
+
+    const tomas = tomasData ? Object.entries(tomasData).map(([id,t])=>({id,...t})).sort((a,b)=>new Date(a.hora_programada)-new Date(b.hora_programada)) : [];
+    const signos = signosData ? Object.entries(signosData).map(([id,s])=>({id,...s})).sort((a,b)=>new Date(b.hora)-new Date(a.hora)) : [];
+
+    if (tomas.length === 0 && signos.length === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-title">Sin registros</div><div class="empty-state-sub">No hay datos para ${fecha}.</div></div>`;
+      return;
+    }
+
+    let html = '';
+    if (tomas.length > 0) {
+      html += `<div class="hist-date-header">💊 Medicamentos (${tomas.filter(t=>t.confirmado).length}/${tomas.length} tomados)</div>`;
+      html += tomas.map(t => {
+        const st = t.confirmado ? {icon:'✅',cls:'badge-ok',lbl:'Tomado'} : t.no_tomado ? {icon:'❌',cls:'badge-danger',lbl:'No tomó'} : {icon:'⏰',cls:'badge-neutral',lbl:'Sin confirmar'};
+        return `<div class="hist-row">
+          <div class="hist-row-icon">💊</div>
+          <div class="hist-row-info">
+            <div class="hist-row-title">${t.nombre} · ${t.dosis}</div>
+            <div class="hist-row-sub">${t.confirmado_por ? `${t.confirmado_por}` : ''} ${t.notas ? '· '+t.notas : ''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <span class="badge ${st.cls}" style="font-size:10px">${st.icon} ${st.lbl}</span>
+            <div class="hist-row-time">${fmtTime(t.hora_programada)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    if (signos.length > 0) {
+      html += `<div class="hist-date-header">🩺 Signos vitales</div>`;
+      html += signos.map(s => {
+        const vals = [];
+        if (s.sistolica) vals.push(`${s.sistolica}/${s.diastolica} mmHg`);
+        if (s.glucosa)   vals.push(`${s.glucosa} mg/dL`);
+        if (s.temperatura) vals.push(`${s.temperatura}°C`);
+        if (s.pulso)     vals.push(`${s.pulso} bpm`);
+        return `<div class="hist-row">
+          <div class="hist-row-icon">🩺</div>
+          <div class="hist-row-info">
+            <div class="hist-row-title">${vals.join(' · ') || 'Sin valores'}</div>
+            <div class="hist-row-sub">${s.registrado_por || ''} ${s.notas ? '· '+s.notas : ''}</div>
+          </div>
+          <div class="hist-row-time">${fmtTime(s.hora)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    container.innerHTML = html;
+  } catch(e) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Error</div><div class="empty-state-sub">${e.message}</div></div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════════════════════════════════
+function showSettings() {
+  document.getElementById('cfg-usuario').value = CONFIG.usuario;
+  document.getElementById('cfg-paciente').value = CONFIG.paciente;
+  document.getElementById('cfg-firebase-url').value = CONFIG.firebase_url;
+  document.getElementById('cfg-data-path').value = CONFIG.data_path;
+  openModal('modal-settings');
+}
+
+function saveSettings() {
+  CONFIG.usuario      = document.getElementById('cfg-usuario').value.trim();
+  CONFIG.paciente     = document.getElementById('cfg-paciente').value.trim() || 'Papá';
+  CONFIG.firebase_url = document.getElementById('cfg-firebase-url').value.trim().replace(/\/$/, '');
+  CONFIG.data_path    = document.getElementById('cfg-data-path').value.trim() || 'cuidado_papa';
+
+  localStorage.setItem('usuario',   CONFIG.usuario);
+  localStorage.setItem('paciente',  CONFIG.paciente);
+  localStorage.setItem('fb_url',    CONFIG.firebase_url);
+  localStorage.setItem('fb_path',   CONFIG.data_path);
+
+  document.getElementById('header-title').textContent = `Cuidado ${CONFIG.paciente}`;
+  document.getElementById('header-sub').textContent = CONFIG.usuario ? `Hola, ${CONFIG.usuario}` : 'Configurá tu nombre en ajustes';
+
+  closeModal('modal-settings');
+  toast('✅ Configuración guardada');
+  loadMedicamentos();
+}
+
+// ════════════════════════════════════════════════════════════
+//  AUTO-REFRESH cada 5 minutos
+// ════════════════════════════════════════════════════════════
+setInterval(async () => {
+  if (state.tab === 'hoy') await loadTomasHoy();
+  scheduleAlarms();
+}, 5 * 60 * 1000);
+
+// Refresh timeline cada 30 seg (para mover estados de "pronto" a "atrasado")
+setInterval(() => {
+  if (state.tab === 'hoy' && Object.keys(state.tomas_hoy).length > 0) renderTimeline();
+}, 30 * 1000);
+
+// ════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════
+async function init() {
+  await registerSW();
+
+  // Notif banner
+  if (localStorage.getItem('notif_granted') === '1' || Notification.permission === 'granted') {
+    document.getElementById('notif-banner').classList.add('hidden');
+  }
+
+  // Header
+  document.getElementById('header-title').textContent = `Cuidado ${CONFIG.paciente}`;
+  document.getElementById('header-sub').textContent = CONFIG.usuario
+    ? `Hola, ${CONFIG.usuario}`
+    : 'Configurá tu nombre en ajustes ⚙️';
+
+  // Si no hay Firebase configurado, abrir settings
+  if (!localStorage.getItem('fb_url') || !localStorage.getItem('fb_path')) {
+    setTimeout(showSettings, 500);
+  }
+
+  await loadMedicamentos();
+  await loadSignosRecientes();
+}
+
+init();
+</script>
+</body>
+</html>

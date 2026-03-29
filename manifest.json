@@ -1,0 +1,18 @@
+{
+  "name": "Cuidado Papá",
+  "short_name": "Cuidado Papá",
+  "description": "Control de medicamentos, presión y glucosa",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
