@@ -1201,6 +1201,13 @@ async function guardarMedicamento() {
   const nombre = document.getElementById('med-nombre').value.trim();
   if (!nombre) { toast('⚠️ Ingresá el nombre'); return; }
 
+  // Validar horas fijas si corresponde
+  const freqTipo = document.getElementById('med-freq-tipo').value;
+  if (freqTipo === 'horas_fijas' && state.horas_fijas_temp.length === 0) {
+    toast('⚠️ Agregá al menos una hora de toma');
+    return;
+  }
+
   // Validar Firebase configurado
   if (!CONFIG.firebase_url) {
     toast('⚠️ Configurá Firebase primero (⚙️)');
@@ -1305,12 +1312,15 @@ async function generateTomasHoy(force = false) {
       }
 
       horarios.forEach(hora => {
+        if (!hora || isNaN(hora.getTime())) return; // skip invalid dates
         const tomaId = `${medId}_${hora.getHours()}h${hora.getMinutes()}m`;
         if (!existing[tomaId] || force) {
+          const nombre = med.nombre || 'Sin nombre';
+          const dosis = `${med.dosis_val||''} ${med.dosis_unit||''}`.trim() || '—';
           fb.set(`tomas/${fecha}/${tomaId}`, {
             medicamento_id: medId,
-            nombre: med.nombre,
-            dosis: `${med.dosis_val||''} ${med.dosis_unit||''}`.trim(),
+            nombre,
+            dosis,
             hora_programada: hora.toISOString(),
             confirmado: false,
             confirmado_por: null,
@@ -1340,10 +1350,18 @@ function renderTimeline() {
   const dateLabel = new Date().toLocaleDateString('es-CR', { weekday:'long', day:'numeric', month:'long' });
   document.getElementById('hoy-date-label').textContent = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
 
-  const pendientes = tomas.filter(t => !t.confirmado && isAtrasado(t.hora_programada)).length;
-  const tomadas = tomas.filter(t => t.confirmado).length;
+  // Filtrar tomas corruptas (sin nombre válido o sin hora válida)
+  const tomasValidas = tomas.filter(t => t.nombre && t.nombre !== 'undefined' && t.hora_programada && !isNaN(new Date(t.hora_programada).getTime()));
+
+  // Limpiar de Firebase las tomas corruptas silenciosamente
+  tomas.filter(t => !t.nombre || t.nombre === 'undefined' || !t.hora_programada).forEach(t => {
+    fb.del(`tomas/${today()}/${t.id}`).catch(()=>{});
+  });
+
+  const pendientes = tomasValidas.filter(t => !t.confirmado && isAtrasado(t.hora_programada)).length;
+  const tomadas = tomasValidas.filter(t => t.confirmado).length;
   const resEl = document.getElementById('hoy-resumen');
-  resEl.textContent = `${tomadas}/${tomas.length} tomadas`;
+  resEl.textContent = `${tomadas}/${tomasValidas.length} tomadas`;
   resEl.className = 'badge ' + (pendientes > 0 ? 'badge-danger' : 'badge-ok');
 
   // Badge
@@ -1351,12 +1369,12 @@ function renderTimeline() {
   if (pendientes > 0) { badge.textContent = pendientes; badge.classList.add('show'); }
   else { badge.classList.remove('show'); }
 
-  if (tomas.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-title">Sin tomas programadas</div><div class="empty-state-sub">Agregá medicamentos para ver el horario del día.</div></div>`;
+  if (tomasValidas.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💊</div><div class="empty-state-title">Sin tomas programadas</div><div class="empty-state-sub">Agregá medicamentos para ver el horario del día.</div></div>`;
     return;
   }
 
-  container.innerHTML = `<div class="timeline">${tomas.map(t => {
+  container.innerHTML = `<div class="timeline">${tomasValidas.map(t => {
     const hora = fmtTime(t.hora_programada);
     const now = new Date();
     const hp = new Date(t.hora_programada);
