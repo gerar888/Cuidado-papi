@@ -533,6 +533,7 @@ body {
     <div class="header-sub" id="header-sub">Cargando...</div>
   </div>
   <div class="header-actions">
+    <button class="icon-btn" onclick="showDiag()" title="Estado de alarmas">🔔</button>
     <button class="icon-btn" onclick="showSettings()" title="Configuración">⚙️</button>
     <button class="icon-btn" id="install-btn" onclick="installPWA()" title="Instalar app" style="display:none">📲</button>
   </div>
@@ -1710,17 +1711,208 @@ function saveSettings() {
 }
 
 // ════════════════════════════════════════════════════════════
-//  AUTO-REFRESH cada 5 minutos
+//  ALARMAS DESDE HILO PRINCIPAL (más confiable en iOS)
+// ════════════════════════════════════════════════════════════
+
+// Rastreo de alarmas ya disparadas en esta sesión
+const alarmasDisparadas = new Set();
+
+async function checkAlarmasMainThread() {
+  if (Notification.permission !== 'granted') return;
+  if (Object.keys(state.medicamentos).length === 0) return;
+
+  const ahora = new Date();
+  const tomas = Object.entries(state.tomas_hoy)
+    .map(([id, t]) => ({ id, ...t }))
+    .filter(t => t.nombre && t.nombre !== 'undefined' && !t.confirmado && t.hora_programada);
+
+  for (const toma of tomas) {
+    const hp = new Date(toma.hora_programada);
+    const diffMin = (ahora - hp) / 60000; // minutos desde la hora programada
+
+    // Disparar si estamos entre 0 y 2 minutos después de la hora
+    if (diffMin >= 0 && diffMin < 2) {
+      const alarmKey = `${today()}_${toma.id}`;
+      if (!alarmasDisparadas.has(alarmKey)) {
+        alarmasDisparadas.add(alarmKey);
+        await dispararNotificacionLocal(toma);
+      }
+    }
+  }
+}
+
+async function dispararNotificacionLocal(toma) {
+  const hora = fmtTime(toma.hora_programada);
+  const titulo = `💊 ${toma.nombre}`;
+  const cuerpo = `${toma.dosis} · ${hora}`;
+
+  try {
+    // Intentar via Service Worker primero (mejor soporte en Android)
+    if (swRegistration && swRegistration.active) {
+      await swRegistration.showNotification(titulo, {
+        body: cuerpo,
+        icon: './icon.svg',
+        badge: './badge.svg',
+        tag: toma.id,
+        requireInteraction: true,
+        vibrate: [400, 150, 400, 150, 800],
+        data: toma,
+        actions: [
+          { action: 'tomado',   title: '✅ Ya tomado' },
+          { action: 'posponer', title: '⏰ En 10 min' }
+        ]
+      });
+    } else if ('Notification' in window && Notification.permission === 'granted') {
+      // Fallback: Notification directa (funciona en iOS PWA con app abierta)
+      const n = new Notification(titulo, { body: cuerpo, icon: './icon.svg', tag: toma.id });
+      n.onclick = () => { window.focus(); abrirConfirmar(today(), toma.id); };
+    }
+
+    // Sonido de alarma con Web Audio API
+    playAlarmSound();
+
+    // También mostrar toast en la UI
+    toast(`🔔 ${toma.nombre} — hora de tomar`, 8000);
+
+    // Si el app está visible, mostrar popup de confirmación automático
+    if (!document.hidden) {
+      setTimeout(() => abrirConfirmar(today(), toma.id), 500);
+    }
+
+  } catch(e) {
+    console.warn('dispararNotificacionLocal error:', e);
+    // Fallback mínimo: solo el toast y el sonido
+    toast(`🔔 ${toma.nombre} — hora de tomar (${hora})`, 10000);
+    playAlarmSound();
+  }
+}
+
+function playAlarmSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const playBeep = (freq, start, duration) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0.3, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+      o.start(ctx.currentTime + start);
+      o.stop(ctx.currentTime + start + duration);
+    };
+    // Patrón: bip-bip-bip largo
+    playBeep(880, 0,    0.2);
+    playBeep(880, 0.3,  0.2);
+    playBeep(1047, 0.6, 0.5);
+  } catch(e) { /* audio no disponible */ }
+}
+
+// Chequear alarmas cada 30 segundos (hilo principal)
+setInterval(checkAlarmasMainThread, 30 * 1000);
+
+// ════════════════════════════════════════════════════════════
+//  AUTO-REFRESH
 // ════════════════════════════════════════════════════════════
 setInterval(async () => {
   if (state.tab === 'hoy') await loadTomasHoy();
   scheduleAlarms();
 }, 5 * 60 * 1000);
 
-// Refresh timeline cada 30 seg (para mover estados de "pronto" a "atrasado")
 setInterval(() => {
   if (state.tab === 'hoy' && Object.keys(state.tomas_hoy).length > 0) renderTimeline();
 }, 30 * 1000);
+
+// ════════════════════════════════════════════════════════════
+//  DIAGNÓSTICO
+// ════════════════════════════════════════════════════════════
+function showDiag() {
+  runDiag();
+  openModal('modal-diag');
+}
+
+async function runDiag() {
+  const isIOS       = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid   = /Android/.test(navigator.userAgent);
+  const isStandalone= window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  const hasNotifAPI = 'Notification' in window;
+  const hasSW       = 'serviceWorker' in navigator;
+  const notifPerm   = hasNotifAPI ? Notification.permission : 'no-api';
+  const swState     = swRegistration ? (swRegistration.active ? 'activo ✅' : 'registrado pero sin activate') : 'no registrado';
+  const proximas    = calcularProximasAlarmas().slice(0, 3);
+
+  const rows = [
+    { label: 'Dispositivo',         val: isIOS ? '🍎 iPhone/iPad' : isAndroid ? '🤖 Android' : '💻 Desktop' },
+    { label: 'Modo instalado (PWA)',  val: isStandalone ? '✅ Sí — instalado en pantalla de inicio' : '❌ No — abrí desde el browser' },
+    { label: 'API Notifications',    val: hasNotifAPI ? '✅ Disponible' : '❌ No disponible en este browser' },
+    { label: 'Permiso notificaciones',val: notifPerm === 'granted' ? '✅ Concedido' : notifPerm === 'denied' ? '🚫 Bloqueado (ir a Ajustes iOS)' : '⚠️ No pedido — tocá "Pedir permiso"' },
+    { label: 'Service Worker',       val: hasSW ? swState : '❌ No soportado' },
+    { label: 'Medicamentos cargados', val: Object.keys(state.medicamentos).filter(id => state.medicamentos[id].activo).length + ' activos' },
+    { label: 'Tomas hoy',            val: Object.keys(state.tomas_hoy).length + ' tomas' },
+    { label: 'Alarmas disparadas hoy',val: alarmasDisparadas.size + ' en esta sesión' },
+  ];
+
+  let html = rows.map(r => `
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--text2)">${r.label}</span>
+      <span style="font-weight:500;text-align:right;max-width:55%">${r.val}</span>
+    </div>`).join('');
+
+  if (proximas.length > 0) {
+    html += `<div style="margin-top:12px;font-weight:600;margin-bottom:6px">⏰ Próximas alarmas:</div>`;
+    html += proximas.map(a => {
+      const hp = new Date(a.hora_programada);
+      const diffMin = Math.round((hp - Date.now()) / 60000);
+      return `<div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+        <span>${a.nombre}</span>
+        <span style="color:var(--text2)">${fmtTime(a.hora_programada)} (en ${diffMin} min)</span>
+      </div>`;
+    }).join('');
+  }
+
+  if (!isStandalone && isIOS) {
+    html += `<div style="margin-top:12px;padding:10px;background:rgba(248,81,73,.1);border-radius:8px;color:var(--danger);font-size:12px">
+      ⚠️ <strong>No está instalado como app.</strong> Las notificaciones en iOS requieren que el app esté instalado en la pantalla de inicio. Tocá el botón compartir en Safari → "Agregar a pantalla de inicio".
+    </div>`;
+  }
+
+  if (notifPerm === 'denied') {
+    html += `<div style="margin-top:12px;padding:10px;background:rgba(248,81,73,.1);border-radius:8px;color:var(--danger);font-size:12px">
+      🚫 <strong>Notificaciones bloqueadas.</strong> Para habilitarlas: Ajustes iOS → ${CONFIG.paciente ? 'Cuidado ' + CONFIG.paciente : 'la app'} → Notificaciones → Permitir.
+    </div>`;
+  }
+
+  document.getElementById('diag-content').innerHTML = html;
+}
+
+async function testNotificacion() {
+  if (!('Notification' in window)) { toast('❌ Este browser no soporta notificaciones'); return; }
+  if (Notification.permission !== 'granted') {
+    toast('⚠️ Primero concedé permiso con el botón de abajo');
+    return;
+  }
+
+  try {
+    playAlarmSound();
+    if (swRegistration && swRegistration.active) {
+      await swRegistration.showNotification('🔔 Prueba de alarma', {
+        body: 'Si ves esto, las notificaciones funcionan ✅',
+        icon: './icon.svg',
+        requireInteraction: true,
+        vibrate: [400,150,400]
+      });
+      toast('✅ Notificación enviada — fijate si apareció');
+    } else {
+      const n = new Notification('🔔 Prueba de alarma', {
+        body: 'Si ves esto, las notificaciones funcionan ✅',
+        icon: './icon.svg'
+      });
+      toast('✅ Notificación directa enviada');
+    }
+  } catch(e) {
+    toast('❌ Error: ' + e.message, 5000);
+  }
+}
 
 // ════════════════════════════════════════════════════════════
 //  INIT
@@ -1728,35 +1920,30 @@ setInterval(() => {
 async function init() {
   await registerSW();
 
-  // Detectar si es iOS Safari en modo browser (no PWA)
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-  const hasNotifAPI = ('Notification' in window);
+  const isIOS       = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone= window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  const hasNotifAPI = 'Notification' in window;
 
-  if (isStandalone && hasNotifAPI) {
-    // Es PWA instalada con API de notificaciones — mostrar banner de notif si no está concedido
-    if (localStorage.getItem('notif_granted') === '1' || Notification.permission === 'granted') {
-      document.getElementById('notif-banner').classList.add('hidden');
-    } else {
-      document.getElementById('notif-banner').classList.remove('hidden');
-    }
-    document.getElementById('pwa-install-banner').classList.add('hidden');
-  } else if (isIOS && !isStandalone) {
-    // iOS Safari en browser: no tiene API de notif, mostrar banner de instalación
+  // Banner logic
+  if (isIOS && !isStandalone) {
+    // iPhone en browser: pedir que instale
     document.getElementById('notif-banner').classList.add('hidden');
     document.getElementById('pwa-install-banner').classList.remove('hidden');
-  } else if (!hasNotifAPI) {
-    // Otro browser sin API: ocultar ambos banners
-    document.getElementById('notif-banner').classList.add('hidden');
-    document.getElementById('pwa-install-banner').classList.add('hidden');
-  } else {
-    // Android Chrome u otro con API: mostrar banner de notif
-    if (localStorage.getItem('notif_granted') === '1' || Notification.permission === 'granted') {
+  } else if (hasNotifAPI) {
+    if (Notification.permission === 'granted') {
       document.getElementById('notif-banner').classList.add('hidden');
+      localStorage.setItem('notif_granted', '1');
+    } else if (Notification.permission === 'denied') {
+      // Bloqueado — mostrar banner diferente
+      document.getElementById('notif-banner').classList.remove('hidden');
+      document.getElementById('notif-banner').innerHTML = '🚫 <strong>Notificaciones bloqueadas.</strong> Ir a Ajustes iOS → la app → Notificaciones → Permitir.';
     } else {
+      // default: no pedido aún
       document.getElementById('notif-banner').classList.remove('hidden');
     }
+    document.getElementById('pwa-install-banner').classList.add('hidden');
+  } else {
+    document.getElementById('notif-banner').classList.add('hidden');
     document.getElementById('pwa-install-banner').classList.add('hidden');
   }
 
@@ -1766,7 +1953,6 @@ async function init() {
     ? `Hola, ${CONFIG.usuario}`
     : 'Configurá tu nombre en ajustes ⚙️';
 
-  // Si no hay Firebase configurado, abrir settings
   if (!localStorage.getItem('fb_url') || !localStorage.getItem('fb_path')) {
     setTimeout(showSettings, 600);
   }
@@ -1777,5 +1963,32 @@ async function init() {
 
 init();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: DIAGNÓSTICO DE NOTIFICACIONES
+════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-diag">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">🔔 Diagnóstico de alarmas</div>
+      <button class="modal-close" onclick="closeModal('modal-diag')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="diag-content" style="font-size:13px;line-height:1.8"></div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary btn-full" onclick="testNotificacion()">🔔 Enviar notificación de prueba AHORA</button>
+        <button class="btn btn-secondary btn-full" onclick="requestNotifications()">🔑 Pedir permiso de notificaciones</button>
+        <button class="btn btn-secondary btn-full" onclick="runDiag()">🔄 Actualizar diagnóstico</button>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.6">
+        <strong style="color:var(--warn)">⚠️ Limitación de iOS:</strong><br>
+        En iPhone, las alarmas solo suenan <strong>mientras la app está abierta o en background reciente</strong>. 
+        Si el teléfono lleva varios minutos bloqueado con la app cerrada, iOS suspende el app y no puede disparar alarmas locales.<br><br>
+        <strong>Solución práctica:</strong> Dejá el app abierto en un iPhone/iPad cargando (ej: el de tu hermana en la mesita de noche), y el tuyo también. Así al menos uno siempre está activo.
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
